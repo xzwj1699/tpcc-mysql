@@ -231,8 +231,8 @@ main(argc, argv)
 			       "INSERT INTO customer values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 10.0, 1, 0,?)",
 			       76) ) goto Error_SqlCall_close;
 	if( mysql_stmt_prepare(stmt[5],
-			       "INSERT INTO history values(?,?,?,?,?,?,?,?)",
-			       43) ) goto Error_SqlCall_close;
+			       "INSERT INTO history values(null,?,?,?,?,?,?,?,?)",
+			       48) ) goto Error_SqlCall_close;
 	if( mysql_stmt_prepare(stmt[6],
 			       "INSERT INTO orders values(?,?,?,?,?,NULL,?, 1)",
 			       46) ) goto Error_SqlCall_close;
