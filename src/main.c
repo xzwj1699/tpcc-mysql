@@ -46,6 +46,10 @@ int num_conn;
 int lampup_time;
 int measure_time;
 
+int w_start;
+int w_end;
+int w_common;
+
 int num_node; /* number of servers that consists of cluster i.e. RAC (0:normal mode)*/
 #define NUM_NODE_MAX 8
 char node_string[NUM_NODE_MAX][DB_STRING_MAX];
@@ -127,6 +131,9 @@ int main( int argc, char *argv[] )
   struct sigaction  sigact;
   int port= 3306;
   int fd, seed;
+  w_start = 0;
+  w_end = 0;
+  w_common = 0;
 
   printf("***************************************\n");
   printf("*** ###easy### TPC-C Load Generator ***\n");
@@ -167,7 +174,7 @@ int main( int argc, char *argv[] )
 
   /* Parse args */
 
-    while ( (c = getopt(argc, argv, "h:P:d:u:p:w:c:r:l:i:f:t:m:o:S:0:1:2:3:4:")) != -1) {
+    while ( (c = getopt(argc, argv, "h:P:d:u:p:w:c:r:l:i:f:t:m:o:S:0:1:2:3:4:5:6:7:")) != -1) {
         switch (c) {
         case 'h':
             printf ("option h with value '%s'\n", optarg);
@@ -248,6 +255,18 @@ int main( int argc, char *argv[] )
         case '4':
             printf ("option 4 (response time limit for transaction 4) '%s'\n", optarg);
             rt_limit[4] = atoi(optarg);
+            break;
+        case '5':
+            printf("option 5 (warehouse range start from %s for all transaction) \n", optarg);
+            w_start = atoi(optarg);
+            break;
+        case '6':
+            printf("option 6 (warehouse range end at %s for all transaction) \n", optarg);
+            w_end = atoi(optarg);
+            break;
+        case '7':
+            printf("option 7 (common warehouse range is set to last %s of whole range \n)", optarg);
+            w_common = atoi(optarg);
             break;
         case '?':
     	    printf("Usage: tpcc_start -h server_host -P port -d database_name -u mysql_user -p mysql_password -w warehouses -c connections -r warmup_time -l running_time -i report_interval -f report_file -t trx_file\n");
@@ -364,6 +383,10 @@ int main( int argc, char *argv[] )
   printf(" [connection]: %d\n", num_conn);
   printf("     [rampup]: %d (sec.)\n", lampup_time);
   printf("    [measure]: %d (sec.)\n", measure_time);
+  if(w_start > 0 && w_end > 0) {
+    printf("    [w_start]: %d \n", w_start);
+    printf("      [w_end]: %d \n", w_end);
+  }
 
   if(valuable_flg==1){
     printf("      [ratio]: %d:%d:%d:%d:%d\n", atoi(argv[9 + arg_offset]), atoi(argv[10 + arg_offset]),
@@ -772,11 +795,13 @@ int thread_main (thread_arg* arg)
 
   /* Prepare ALL of SQLs */
   if( mysql_stmt_prepare(stmt[t_num][0], "SELECT c_discount, c_last, c_credit, w_tax FROM customer, warehouse WHERE w_id = ? AND c_w_id = w_id AND c_d_id = ? AND c_id = ?", 128) ) goto sqlerr;
+  // if( mysql_stmt_prepare(stmt[t_num][1], "SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? ", 70) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][1], "SELECT d_next_o_id, d_tax FROM district WHERE d_id = ? AND d_w_id = ? FOR UPDATE", 80) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][2], "UPDATE district SET d_next_o_id = ? + 1 WHERE d_id = ? AND d_w_id = ?", 69) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][3], "INSERT INTO orders (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, o_ol_cnt, o_all_local) VALUES(?, ?, ?, ?, ?, ?, ?)", 111) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][4], "INSERT INTO new_orders (no_o_id, no_d_id, no_w_id) VALUES (?,?,?)", 65) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][5], "SELECT i_price, i_name, i_data FROM item WHERE i_id = ?", 55) ) goto sqlerr;
+  // if( mysql_stmt_prepare(stmt[t_num][6], "SELECT s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE s_i_id = ? AND s_w_id = ? ", 179) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][6], "SELECT s_quantity, s_data, s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10 FROM stock WHERE s_i_id = ? AND s_w_id = ? FOR UPDATE", 189) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][7], "UPDATE stock SET s_quantity = ? WHERE s_i_id = ? AND s_w_id = ?", 63) ) goto sqlerr;
   if( mysql_stmt_prepare(stmt[t_num][8], "INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number, ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 159) ) goto sqlerr;
