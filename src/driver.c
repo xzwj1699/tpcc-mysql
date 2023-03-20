@@ -25,6 +25,9 @@ extern int num_conn;
 extern int activate_transaction;
 extern int counting_on;
 
+extern int w_start;
+extern int w_end;
+extern int w_common;
 extern int num_node;
 extern int time_count;
 extern FILE *freport_file;
@@ -56,21 +59,21 @@ int driver (int t_num)
 
     /* Actually, WaitTimes are needed... */
     while( activate_transaction ){
-      switch(seq_get()){
+      switch(0){
       case 0:
 	do_neword(t_num);
-	break;
-      case 1:
-	do_payment(t_num);
-	break;
-      case 2:
-	do_ordstat(t_num);
-	break;
-      case 3:
-	do_delivery(t_num);
-	break;
-      case 4:
-	do_slev(t_num);
+	// break;
+  //     case 1:
+	// do_payment(t_num);
+	// break;
+  //     case 2:
+	// do_ordstat(t_num);
+	// break;
+  //     case 3:
+	// do_delivery(t_num);
+	// break;
+  //     case 4:
+	// do_slev(t_num);
 	break;
       default:
 	printf("Error - Unknown sequence.\n");
@@ -104,12 +107,26 @@ static int do_neword (int t_num)
     int  qty[MAX_NUM_ITEMS];
 
     if(num_node==0){
-	w_id = RandomNumber(1, num_ware);
+	    w_id = RandomNumber(1, num_ware);
     }else{
-	c_num = ((num_node * t_num)/num_conn); /* drop moduls */
-	w_id = RandomNumber(1 + (num_ware * c_num)/num_node,
-			    (num_ware * (c_num + 1))/num_node);
+      c_num = ((num_node * t_num)/num_conn); /* drop moduls */
+      w_id = RandomNumber(1 + (num_ware * c_num)/num_node,
+            (num_ware * (c_num + 1))/num_node);
     }
+
+    if(w_start > 0 && w_end > 0 && w_common == 0) {
+      w_id = RandomNumber(w_start, w_end);
+    }
+    else if (w_start > 0 && w_end > 0 && w_common > 0) {
+      double pick_range = RandomNumber(1, 10000) * 1.0 / 10000;
+      if(pick_range > (w_end - w_start + 1) * 1.0 / (w_common + w_end - w_start + 1)) {
+        w_id = RandomNumber(num_ware - w_common + 1, num_ware);
+      }
+      else {
+        w_id = RandomNumber(w_start, w_end);
+      }
+    }
+    
     d_id = RandomNumber(1, DIST_PER_WARE);
     c_id = NURand(1023, 1, CUST_PER_DIST);
 
@@ -117,18 +134,18 @@ static int do_neword (int t_num)
     rbk = RandomNumber(1, 100);
 
     for (i = 0; i < ol_cnt; i++) {
-	itemid[i] = NURand(8191, 1, MAXITEMS);
-	if ((i == ol_cnt - 1) && (rbk == 1)) {
-	    itemid[i] = notfound;
-	}
-	if (RandomNumber(1, 100) != 1) {
-	    supware[i] = w_id;
-	}
-	else {
-	    supware[i] = other_ware(w_id);
-	    all_local = 0;
-	}
-	qty[i] = RandomNumber(1, 10);
+      itemid[i] = NURand(8191, 1, MAXITEMS);
+      if ((i == ol_cnt - 1) && (rbk == 1)) {
+        itemid[i] = notfound;
+      }
+      if (RandomNumber(1, 100) != 1) {
+        supware[i] = w_id;
+      }
+      else {
+        supware[i] = other_ware(w_id);
+        all_local = 0;
+      }
+      qty[i] = RandomNumber(1, 10);
     }
 
     clk1 = clock_gettime(CLOCK_MONOTONIC, &tbuf1 );
@@ -137,46 +154,40 @@ static int do_neword (int t_num)
       clk2 = clock_gettime(CLOCK_MONOTONIC, &tbuf2 );
 
       if(ret){
-
-	rt = (double)(tbuf2.tv_sec * 1000.0 + tbuf2.tv_nsec/1000000.0-tbuf1.tv_sec * 1000.0 - tbuf1.tv_nsec/1000000.0);
+        rt = (double)(tbuf2.tv_sec * 1000.0 + tbuf2.tv_nsec/1000000.0-tbuf1.tv_sec * 1000.0 - tbuf1.tv_nsec/1000000.0);
         //printf("NOT : %.3f\n", rt);
         if (freport_file != NULL) {
           fprintf(freport_file,"%d %.3f\n", time_count, rt);
         }
-
-	if(rt > max_rt[0])
-	  max_rt[0]=rt;
-	total_rt[0] += rt;
-	sb_percentile_update(&local_percentile, rt);
-	hist_inc(0, rt);
-	if(counting_on){
-	  if( rt < rt_limit[0]){
-	    success[0]++;
-	    success2[0][t_num]++;
-	  }else{
-	    late[0]++;
-	    late2[0][t_num]++;
-	  }
-	}
-
-	return (1); /* end */
-      }else{
-
-	if(counting_on){
-	  retry[0]++;
-	  retry2[0][t_num]++;
-	}
-
+        if(rt > max_rt[0])
+          max_rt[0]=rt;
+        total_rt[0] += rt;
+        sb_percentile_update(&local_percentile, rt);
+        hist_inc(0, rt);
+        if(counting_on){
+          if( rt < rt_limit[0]){
+            success[0]++;
+            success2[0][t_num]++;
+          }else{
+            late[0]++;
+            late2[0][t_num]++;
+          }
+        }
+        return (1); /* end */
+      }
+      else{
+        if(counting_on){
+          retry[0]++;
+          retry2[0][t_num]++;
+        }
       }
     }
-
     if(counting_on){
       retry[0]--;
       retry2[0][t_num]--;
       failure[0]++;
       failure2[0][t_num]++;
     }
-
     return (0);
 }
 
