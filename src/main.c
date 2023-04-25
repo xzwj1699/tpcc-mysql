@@ -265,7 +265,7 @@ int main( int argc, char *argv[] )
             w_end = atoi(optarg);
             break;
         case '7':
-            printf("option 7 (common warehouse range is set to last %s of whole range \n)", optarg);
+            printf("option 7 (overlap ratio %s of whole range \n)", optarg);
             w_common = atoi(optarg);
             break;
         case '?':

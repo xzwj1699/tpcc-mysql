@@ -14,6 +14,8 @@
 #include "sb_percentile.h"
 
 static int other_ware (int home_ware);
+static int other_ware_excludingrange (int start, int end, int home_ware);
+static int other_ware2 (int start, int end, int home_ware);
 static int do_neword (int t_num);
 static int do_payment (int t_num);
 static int do_ordstat (int t_num);
@@ -113,19 +115,8 @@ static int do_neword (int t_num)
       w_id = RandomNumber(1 + (num_ware * c_num)/num_node,
             (num_ware * (c_num + 1))/num_node);
     }
-
-    if(w_start > 0 && w_end > 0 && w_common == 0) {
-      w_id = RandomNumber(w_start, w_end);
-    }
-    else if (w_start > 0 && w_end > 0 && w_common > 0) {
-      double pick_range = RandomNumber(1, 10000) * 1.0 / 10000;
-      if(pick_range > (w_end - w_start + 1) * 1.0 / (w_common + w_end - w_start + 1)) {
-        w_id = RandomNumber(num_ware - w_common + 1, num_ware);
-      }
-      else {
-        w_id = RandomNumber(w_start, w_end);
-      }
-    }
+    
+    w_id = RandomNumber(w_start, w_end);
     
     d_id = RandomNumber(1, DIST_PER_WARE);
     c_id = NURand(1023, 1, CUST_PER_DIST);
@@ -142,7 +133,12 @@ static int do_neword (int t_num)
         supware[i] = w_id;
       }
       else {
-        supware[i] = other_ware(w_id);
+        int cross_region = RandomNumber(1, 100) < w_common;
+        if(cross_region) {
+          supware[i] = other_ware_excludingrange(w_start, w_end, w_id);
+        } else {
+          supware[i] = other_ware2(w_start, w_end, w_id);
+        }
         all_local = 0;
       }
       qty[i] = RandomNumber(1, 10);
@@ -201,6 +197,27 @@ static int other_ware (int home_ware)
 
     if (num_ware == 1) return home_ware;
     while ((tmp = RandomNumber(1, num_ware)) == home_ware);
+    return tmp;
+}
+
+static int other_ware_excludingrange (int start, int end, int home_ware)
+{
+    int tmp;
+
+    if (num_ware == 1) return home_ware;
+    while (
+      ((tmp = RandomNumber(1, num_ware)) == home_ware) ||
+      (((tmp = RandomNumber(1, num_ware)) >= start) && ((tmp = RandomNumber(1, num_ware)) <= end))
+    );
+    return tmp;
+}
+
+static int other_ware2 (int start, int end, int home_ware)
+{
+    int tmp;
+
+    if (num_ware == 1) return home_ware;
+    while ((tmp = RandomNumber(start, end)) == home_ware);
     return tmp;
 }
 
