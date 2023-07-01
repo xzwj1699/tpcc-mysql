@@ -124,6 +124,7 @@ static int do_neword (int t_num)
     ol_cnt = RandomNumber(5, 15);
     rbk = RandomNumber(1, 100);
 
+    int cross_region = RandomNumber(1, 100) < w_common;
     for (i = 0; i < ol_cnt; i++) {
       itemid[i] = NURand(8191, 1, MAXITEMS);
       if ((i == ol_cnt - 1) && (rbk == 1)) {
@@ -133,7 +134,6 @@ static int do_neword (int t_num)
         supware[i] = w_id;
       }
       else {
-        int cross_region = RandomNumber(1, 100) < w_common;
         if(cross_region) {
           supware[i] = other_ware_excludingrange(w_start, w_end, w_id);
         } else {
@@ -200,24 +200,33 @@ static int other_ware (int home_ware)
     return tmp;
 }
 
+// Get random remote warehouse id
 static int other_ware_excludingrange (int start, int end, int home_ware)
 {
     int tmp;
 
     if (num_ware == 1) return home_ware;
-    while (
-      ((tmp = RandomNumber(1, num_ware)) == home_ware) ||
-      (((tmp = RandomNumber(1, num_ware)) >= start) && ((tmp = RandomNumber(1, num_ware)) <= end))
-    );
+    tmp = RandomNumber(1, num_ware);
+    while (tmp >= start && tmp <= end) {
+      tmp = RandomNumber(1, num_ware);
+    }
+    // while (
+    //   ((tmp = RandomNumber(1, num_ware)) == home_ware) ||
+    //   (((tmp = RandomNumber(1, num_ware)) >= start) && ((tmp = RandomNumber(1, num_ware)) <= end))
+    // );
     return tmp;
 }
 
+// Get random remote warehouse but not cross-region
 static int other_ware2 (int start, int end, int home_ware)
 {
     int tmp;
-
-    if (num_ware == 1) return home_ware;
-    while ((tmp = RandomNumber(start, end)) == home_ware);
+    tmp = RandomNumber(start, end);
+    while (tmp == home_ware) {
+      tmp = RandomNumber(start, end);
+    }
+    // if (num_ware == 1) return home_ware;
+    // while ((tmp = RandomNumber(start, end)) == home_ware);
     return tmp;
 }
 
