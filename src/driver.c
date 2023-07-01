@@ -124,7 +124,7 @@ static int do_neword (int t_num)
     ol_cnt = RandomNumber(5, 15);
     rbk = RandomNumber(1, 100);
 
-    int cross_region = RandomNumber(1, 100) < w_common;
+    int cross_region = RandomNumber(0, 99) < w_common;
     for (i = 0; i < ol_cnt; i++) {
       itemid[i] = NURand(8191, 1, MAXITEMS);
       if ((i == ol_cnt - 1) && (rbk == 1)) {
